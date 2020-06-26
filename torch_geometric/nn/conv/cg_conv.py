@@ -1,3 +1,5 @@
+from torch_geometric.typing import OptTensor
+
 import torch
 from torch.nn import Linear
 import torch.nn.functional as F
@@ -48,16 +50,17 @@ class CGConv(MessagePassing):
         self.lin_f.reset_parameters()
         self.lin_s.reset_parameters()
 
-    def forward(self, x, edge_index, edge_attr):
+    def forward(self, x, edge_index, edge_attr: OptTensor = None):
         """"""
-        return self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        # propagate_type: (x: Tensor, edge_attr: OptTensor)
+        out = self.propagate(edge_index, x=x, edge_attr=edge_attr, size=None)
+        out += x
+        return out
 
-    def message(self, x_i, x_j, edge_attr):
+    def message(self, x_i, x_j, edge_attr: OptTensor):
+        assert edge_attr is not None
         z = torch.cat([x_i, x_j, edge_attr], dim=-1)
         return self.lin_f(z).sigmoid() * F.softplus(self.lin_s(z))
-
-    def update(self, aggr_out, x):
-        return aggr_out + x
 
     def __repr__(self):
         return '{}({}, {}, dim={})'.format(self.__class__.__name__,

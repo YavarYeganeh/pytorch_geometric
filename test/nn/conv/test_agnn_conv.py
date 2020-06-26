@@ -10,6 +10,15 @@ def test_agnn_conv():
 
     conv = AGNNConv(requires_grad=True)
     assert conv.__repr__() == 'AGNNConv()'
-    assert conv(x, edge_index).size() == (num_nodes, in_channels)
+    out = conv(x, edge_index)
+    assert out.size() == (num_nodes, in_channels)
+
+    jit = torch.jit.script(conv.jittable())
+    assert jit(x, edge_index).tolist() == out.tolist()
+
     conv = AGNNConv(requires_grad=False)
-    assert conv(x, edge_index).size() == (num_nodes, in_channels)
+    out = conv(x, edge_index)
+    assert out.size() == (num_nodes, in_channels)
+
+    jit = torch.jit.script(conv.jittable())
+    assert jit(x, edge_index).tolist() == out.tolist()

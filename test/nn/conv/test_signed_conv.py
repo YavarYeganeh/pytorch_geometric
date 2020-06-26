@@ -11,9 +11,16 @@ def test_signed_conv():
 
     conv = SignedConv(in_channels, out_channels, first_aggr=True)
     assert conv.__repr__() == 'SignedConv(16, 32, first_aggr=True)'
-    x = conv(x, pos_ei, neg_ei)
-    assert x.size() == (num_nodes, 2 * out_channels)
+    out1 = conv(x, pos_ei, neg_ei)
+    assert out1.size() == (num_nodes, 2 * out_channels)
+
+    jit = torch.jit.script(conv.jittable())
+    assert jit(x, pos_ei, neg_ei).tolist() == out1.tolist()
 
     conv = SignedConv(out_channels, out_channels, first_aggr=False)
     assert conv.__repr__() == 'SignedConv(32, 32, first_aggr=False)'
-    assert conv(x, pos_ei, neg_ei).size() == (num_nodes, 2 * out_channels)
+    out2 = conv(out1, pos_ei, neg_ei)
+    assert out2.size() == (num_nodes, 2 * out_channels)
+
+    jit = torch.jit.script(conv.jittable())
+    assert jit(out1, pos_ei, neg_ei).tolist() == out2.tolist()

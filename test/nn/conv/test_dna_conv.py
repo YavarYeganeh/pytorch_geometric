@@ -9,14 +9,27 @@ def test_dna_conv():
     num_nodes = edge_index.max().item() + 1
     x = torch.randn((num_nodes, num_layers, channels))
 
-    conv = DNAConv(channels, heads=4, groups=8, dropout=0.5)
+    conv = DNAConv(channels, heads=4, groups=8, dropout=0.0)
     assert conv.__repr__() == 'DNAConv(32, heads=4, groups=8)'
-    assert conv(x, edge_index).size() == (num_nodes, channels)
+    out = conv(x, edge_index)
+    assert out.size() == (num_nodes, channels)
 
-    conv = DNAConv(channels, heads=1, groups=1, dropout=0.5)
+    jit = torch.jit.script(conv.jittable())
+    assert jit(x, edge_index).tolist() == out.tolist()
+
+    conv = DNAConv(channels, heads=1, groups=1, dropout=0.0)
     assert conv.__repr__() == 'DNAConv(32, heads=1, groups=1)'
-    assert conv(x, edge_index).size() == (num_nodes, channels)
+    out = conv(x, edge_index)
+    assert out.size() == (num_nodes, channels)
 
-    conv = DNAConv(channels, heads=1, groups=1, dropout=0.5, cached=True)
-    conv(x, edge_index).size() == (num_nodes, channels)
-    conv(x, edge_index).size() == (num_nodes, channels)
+    jit = torch.jit.script(conv.jittable())
+    assert jit(x, edge_index).tolist() == out.tolist()
+
+    conv = DNAConv(channels, heads=1, groups=1, dropout=0.0, cached=True)
+    out = conv(x, edge_index)
+    out = conv(x, edge_index)
+    assert out.size() == (num_nodes, channels)
+
+    jit = torch.jit.script(conv.jittable())
+    jit(x, edge_index)
+    assert jit(x, edge_index).tolist() == out.tolist()

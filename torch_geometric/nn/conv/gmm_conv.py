@@ -4,8 +4,6 @@ from torch_geometric.nn.conv import MessagePassing
 
 from ..inits import zeros, glorot
 
-EPS = 1e-15
-
 
 class GMMConv(MessagePassing):
     r"""The gaussian mixture model convolutional operator from the `"Geometric
@@ -47,7 +45,6 @@ class GMMConv(MessagePassing):
         **kwargs (optional): Additional arguments of
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
-
     def __init__(self, in_channels, out_channels, dim, kernel_size,
                  separate_gaussians=False, aggr='mean', root_weight=True,
                  bias=True, **kwargs):
@@ -95,13 +92,12 @@ class GMMConv(MessagePassing):
         x = x.unsqueeze(-1) if x.dim() == 1 else x
         pseudo = pseudo.unsqueeze(-1) if pseudo.dim() == 1 else pseudo
 
-        N, K, M = x.size(0), self.kernel_size, self.out_channels
-
+        # propagate_type: (x: Tensor, pseudo: Tensor)
         if not self.separate_gaussians:
-            out = torch.matmul(x, self.g).view(N, K, M)
-            out = self.propagate(edge_index, x=out, pseudo=pseudo)
+            out = torch.matmul(x, self.g)
+            out = self.propagate(edge_index, x=out, pseudo=pseudo, size=None)
         else:
-            out = self.propagate(edge_index, x=x, pseudo=pseudo)
+            out = self.propagate(edge_index, x=x, pseudo=pseudo, size=None)
 
         if self.root is not None:
             out = out + torch.matmul(x, self.root)
@@ -112,6 +108,7 @@ class GMMConv(MessagePassing):
         return out
 
     def message(self, x_j, pseudo):
+        EPS = 1e-15
         F, M = self.in_channels, self.out_channels
         (E, D), K = pseudo.size(), self.kernel_size
 

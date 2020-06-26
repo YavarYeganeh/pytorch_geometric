@@ -46,12 +46,7 @@ class SignedConv(MessagePassing):
         **kwargs (optional): Additional arguments of
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
-
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 first_aggr,
-                 bias=True,
+    def __init__(self, in_channels, out_channels, first_aggr, bias=True,
                  **kwargs):
         super(SignedConv, self).__init__(aggr='mean', **kwargs)
 
@@ -74,11 +69,14 @@ class SignedConv(MessagePassing):
 
     def forward(self, x, pos_edge_index, neg_edge_index):
         """"""
+        # propagate_type: (x: Tensor)
         if self.first_aggr:
             assert x.size(1) == self.in_channels
 
-            x_pos = torch.cat([self.propagate(pos_edge_index, x=x), x], dim=1)
-            x_neg = torch.cat([self.propagate(neg_edge_index, x=x), x], dim=1)
+            x_pos = torch.cat(
+                [self.propagate(pos_edge_index, x=x, size=None), x], dim=1)
+            x_neg = torch.cat(
+                [self.propagate(neg_edge_index, x=x, size=None), x], dim=1)
 
         else:
             assert x.size(1) == 2 * self.in_channels
@@ -86,22 +84,21 @@ class SignedConv(MessagePassing):
             x_1, x_2 = x[:, :self.in_channels], x[:, self.in_channels:]
 
             x_pos = torch.cat([
-                self.propagate(pos_edge_index, x=x_1),
-                self.propagate(neg_edge_index, x=x_2),
+                self.propagate(pos_edge_index, x=x_1, size=None),
+                self.propagate(neg_edge_index, x=x_2, size=None),
                 x_1,
-            ],
-                              dim=1)
+            ], dim=1)
 
             x_neg = torch.cat([
-                self.propagate(pos_edge_index, x=x_2),
-                self.propagate(neg_edge_index, x=x_1),
+                self.propagate(pos_edge_index, x=x_2, size=None),
+                self.propagate(neg_edge_index, x=x_1, size=None),
                 x_2,
-            ],
-                              dim=1)
+            ], dim=1)
 
         return torch.cat([self.lin_pos(x_pos), self.lin_neg(x_neg)], dim=1)
 
     def __repr__(self):
-        return '{}({}, {}, first_aggr={})'.format(
-            self.__class__.__name__, self.in_channels, self.out_channels,
-            self.first_aggr)
+        return '{}({}, {}, first_aggr={})'.format(self.__class__.__name__,
+                                                  self.in_channels,
+                                                  self.out_channels,
+                                                  self.first_aggr)
